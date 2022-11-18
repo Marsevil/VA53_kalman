@@ -3,3 +3,8 @@ Dataset
 # Compilation result
 /**[Bb]uild**
 /**[Tt]arget**
+
+# Eclipse config files
+.cproject
+.project
+.settings
