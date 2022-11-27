@@ -28,13 +28,17 @@ private: // Functions
 	cv::KalmanFilter buildWithSpeedModel() const;
 	cv::KalmanFilter buildWithAccelerationModel() const;
 
+	void setErrorCovMatrix(cv::KalmanFilter& kf) const;
+
 public: // Canonical
 	KalmanFilterBuilder();
 	virtual ~KalmanFilterBuilder() = default;
 
 public: // Setters
 	inline void setModelType(KalmanModelType modelType) { this->modelType = modelType; }
-	inline KalmanModelType KalmanModelType() const { return this->modelType; }
+	inline KalmanModelType const& KalmanModelType() const { return this->modelType; }
+	inline void setInitialState(std::optional<cv::Mat_<float>> initialState) { this->initialState = initialState; }
+	inline std::optional<cv::Mat_<float>> const& getInitialState() const { return this->initialState; }
 
 public: // Functions
 	cv::KalmanFilter build() const;

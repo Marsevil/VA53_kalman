@@ -36,7 +36,7 @@ int main(int c, char** argv) {
 
 	// Build KalmanFilter
 	KalmanFilterBuilder kfBuilder;
-	kfBuilder.setModelType(KalmanFilterBuilder::KalmanModelType::POSITION);
+	kfBuilder.setModelType(KalmanFilterBuilder::KalmanModelType::SPEED);
 	cv::KalmanFilter kf = kfBuilder.build();
 
 	// Open video
@@ -58,14 +58,15 @@ int main(int c, char** argv) {
 			predictedPoint.y = predictedMatrix(1, 0);
 		}
 
+		const cv::Scalar_<uint8_t> PREDICTED_POINT_COLOR({0, 255, 0});
+		const cv::Scalar_<uint8_t> DETECTED_POINT_COLOR({255, 0, 0});
+		const int POINT_RADIUS(10);
+		const int LINE_WIDTH(2);
 		cv::Mat_<Vec3b> outputFrame = currentFrame.clone();
-		cv::circle(outputFrame, predictedPoint, 20, {0, 255, 0}, -1);
+		cv::circle(outputFrame, predictedPoint, POINT_RADIUS, PREDICTED_POINT_COLOR, -1);
 		if (detectedPosition) {
-			cv::circle(outputFrame, *detectedPosition, 20, {255, 0, 0}, -1);
+			cv::circle(outputFrame, *detectedPosition, POINT_RADIUS, DETECTED_POINT_COLOR, -1);
 		}
-
-		// Show window
-		cv::imshow(MAIN_WINDOW_NAME, outputFrame);
 
 		// Correct Kalman Filter
 		if (detectedPosition) {
@@ -78,6 +79,19 @@ int main(int c, char** argv) {
 
 		precedentDetections.push_back(detectedPosition);
 		precedentPredictions.push_back(predictedPoint);
+
+		//draw trajectories
+		for (auto p1 = precedentDetections.begin(), p2 = p1+1; p1 != precedentDetections.end()-1; ++p1, ++p2) {
+			if (!*p1 || !*p2) continue;
+			cv::line(outputFrame, **p1, **p2, DETECTED_POINT_COLOR, LINE_WIDTH);
+		}
+
+		for (auto p1 = precedentPredictions.begin(), p2 = p1+1; p1 != precedentPredictions.end()-1; ++p1, ++p2) {
+			cv::line(outputFrame, *p1, *p2, PREDICTED_POINT_COLOR, LINE_WIDTH);
+		}
+
+		// Show window
+		cv::imshow(MAIN_WINDOW_NAME, outputFrame);
 	}
 
 	cv::destroyAllWindows();
