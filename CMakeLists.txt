@@ -9,6 +9,7 @@ set(SRCS
 	src/main.cpp
 	src/Detector.cpp
 	src/DetectorDebugger.cpp
+	src/KalmanFilterBuilder.cpp
 	)
 
 set(HDRS
@@ -16,6 +17,7 @@ set(HDRS
 	src/IDetector.hpp
 	src/Detector.hpp
 	src/DetectorDebugger.hpp
+	src/KalmanFilterBuilder.hpp
 	)
 
 # Degine options
