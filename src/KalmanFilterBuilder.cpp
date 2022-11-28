@@ -7,6 +7,8 @@
 
 #include "KalmanFilterBuilder.hpp"
 
+#include <cmath>
+
 KalmanFilterBuilder::KalmanFilterBuilder():
 modelType(POSITION),
 initialState(std::nullopt) {
@@ -15,7 +17,7 @@ initialState(std::nullopt) {
 
 void KalmanFilterBuilder::setErrorCovMatrix(cv::KalmanFilter& kf) const {
 	cv::setIdentity(kf.processNoiseCov, cv::Scalar::all(.03));
-	cv::setIdentity(kf.measurementNoiseCov, cv::Scalar::all(.03));
+	cv::setIdentity(kf.measurementNoiseCov, cv::Scalar::all(.6));
 }
 
 cv::KalmanFilter KalmanFilterBuilder::build() const {
@@ -56,8 +58,8 @@ cv::KalmanFilter KalmanFilterBuilder::buildWithSpeedModel() const {
 
 	// Define matrix
 	kf.transitionMatrix = (cv::Mat_<float>(4, 4) <<
-			1, 0, 1, 0,
-			0, 1, 0, 1,
+			1, 0, dt, 0,
+			0, 1, 0, dt,
 			0, 0, 1, 0,
 			0, 0, 0, 1);
 	kf.measurementMatrix = (cv::Mat_<float>(2, 4) <<
@@ -83,12 +85,12 @@ cv::KalmanFilter KalmanFilterBuilder::buildWithAccelerationModel() const {
 
 	// Define matrix
 	kf.transitionMatrix = (cv::Mat_<float>(6, 6) <<
-			1, 0, 1, 0, 0, 0,
-			0, 1, 0, 1, 0, 0,
-			0, 0, 1, 0, 1, 0,
-			0, 0, 0, 1, 0, 1,
-			0, 0, 0, 0, 1, 0,
-			0, 0, 0, 0, 0, 1);
+			1, 0, dt, 0,  1.0/2.0*pow(dt, 2), 0,
+			0, 1, 0,  dt,        0,           1.0/2.0*pow(dt, 2),
+			0, 0, 1,  0,         dt,          0,
+			0, 0, 0,  1,         0,           dt,
+			0, 0, 0,  0,         1,           0,
+			0, 0, 0,  0,         0,           1);
 	kf.measurementMatrix = (cv::Mat_<float>(2, 6) <<
 			1, 0, 0, 0, 0, 0,
 			0, 1, 0, 0, 0, 0);

@@ -21,6 +21,7 @@ public: // Declare linked type and enums.
 
 private: // Attributes
 	KalmanModelType modelType;
+	float dt;
 	std::optional<cv::Mat_<float>> initialState;
 
 private: // Functions
@@ -34,11 +35,13 @@ public: // Canonical
 	KalmanFilterBuilder();
 	virtual ~KalmanFilterBuilder() = default;
 
-public: // Setters
+public: // Getters & Setters
 	inline void setModelType(KalmanModelType modelType) { this->modelType = modelType; }
 	inline KalmanModelType const& KalmanModelType() const { return this->modelType; }
 	inline void setInitialState(std::optional<cv::Mat_<float>> initialState) { this->initialState = initialState; }
 	inline std::optional<cv::Mat_<float>> const& getInitialState() const { return this->initialState; }
+	inline void setDt(float dt) { this->dt = dt; }
+	inline float getDt() const { return this->dt; }
 
 public: // Functions
 	cv::KalmanFilter build() const;
