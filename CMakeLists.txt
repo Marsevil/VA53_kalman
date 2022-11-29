@@ -29,12 +29,25 @@ if(DEBUG_DETECTOR)
 	message("DEBUG_DETECTOR enabled")
 endif()
 
+# Read conan deps
+if (NOT EXISTS ${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
+	message("Execute conan install")
+	execute_process(
+		COMMAND "conan" "install" ${CMAKE_SOURCE_DIR} "--build=missing"
+		WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+	)
+	message("Conan install ends")
+endif()
+include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
+conan_basic_setup()
+
 # Define targets
 add_executable(${PROJECT_NAME} ${SRCS} ${HDRS})
 
 # Link libs
 target_include_directories(${PROJECT_NAME} PUBLIC ${OpenCV_INCLUDE_DIRS})
 target_link_libraries(${PROJECT_NAME} PRIVATE ${OpenCV_LIBS})
+target_link_libraries(${PROJECT_NAME} PRIVATE ${CONAN_LIBS})
 
 # Include datas
 add_custom_command(
