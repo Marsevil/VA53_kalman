@@ -1,5 +1,6 @@
 #include <iostream>
 #include <filesystem>
+#include <fstream>
 #include <opencv2/opencv.hpp>
 #include <boost/program_options.hpp>
 
@@ -187,6 +188,20 @@ int main(int argc, char** argv) {
 		cv::imshow(MAIN_WINDOW_NAME, outputFrame);
 	}
 
+	// Give the time to observe the result
+	cv::waitKey(0);
+	// End with graphical components
 	cv::destroyAllWindows();
+
+	// Write datas as a csv file
+	std::ofstream csv(outputStatPath);
+	csv << "measured X, " << "measured Y, " << "predicted X, " << "predicted Y" << std::endl;
+	for (auto [pMeasured, pPredicted] = std::tuple{precedentDetections.begin(), precedentPredictions.begin()};
+			pMeasured != precedentDetections.end() && pPredicted != precedentPredictions.end();
+			++pMeasured, ++pPredicted) {
+		csv << (*pMeasured ? std::to_string((**pMeasured).x) : "") << ", "
+				<< (*pMeasured ? std::to_string((**pMeasured).y) : "") << ", "
+				<< (*pPredicted).x << ", " << (*pPredicted).y << std::endl;
+	}
 	return EXIT_SUCCESS;
 }
