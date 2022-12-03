@@ -21,6 +21,7 @@ namespace po = boost::program_options;
 const string MAIN_WINDOW_NAME = "Video";
 const cv::Scalar_<uint8_t> PREDICTED_POINT_COLOR({0, 255, 0});
 const cv::Scalar_<uint8_t> DETECTED_POINT_COLOR({255, 0, 0});
+const cv::Scalar_<uint8_t> CORRECTED_POINT_COLOR({0, 0, 255});
 const int POINT_RADIUS(10);
 const int LINE_WIDTH(2);
 
@@ -137,6 +138,7 @@ int main(int argc, char** argv) {
 
 	// Start video reading
 	std::vector<std::optional<cv::Point2f>> precedentDetections;
+	std::vector<std::optional<cv::Point2f>> precedentCorrected;
 	std::vector<cv::Point2f> precedentPredictions;
 	while(cap.isOpened()) {
 		// Pre-conditions
@@ -146,18 +148,12 @@ int main(int argc, char** argv) {
 
 		// Detect & predict object position
 		const std::optional<cv::Point2f> detectedPosition = detector->detect(currentFrame);
+		std::optional<cv::Point2f> correctedPosition = std::nullopt;
 		cv::Point2f predictedPoint;
 		{
 			cv::Mat_<float> predictedMatrix = kf.predict();
 			predictedPoint.x = predictedMatrix(0, 0);
 			predictedPoint.y = predictedMatrix(1, 0);
-		}
-
-		// Draw points on output frame
-		cv::Mat_<Vec3b> outputFrame = currentFrame.clone();
-		cv::circle(outputFrame, predictedPoint, POINT_RADIUS, PREDICTED_POINT_COLOR, -1);
-		if (detectedPosition) {
-			cv::circle(outputFrame, *detectedPosition, POINT_RADIUS, DETECTED_POINT_COLOR, -1);
 		}
 
 		// Correct Kalman Filter
@@ -166,12 +162,26 @@ int main(int argc, char** argv) {
 				{detectedPosition->x},
 				{detectedPosition->y}
 			});
-			kf.correct(measurement);
+			cv::Mat_<float> correctedMatrix = kf.correct(measurement);
+			correctedPosition = cv::Point2f(
+					correctedMatrix(0, 0),
+					correctedMatrix(1, 0));
+		}
+
+		// Draw points on output frame
+		cv::Mat_<Vec3b> outputFrame = currentFrame.clone();
+		cv::circle(outputFrame, predictedPoint, POINT_RADIUS, PREDICTED_POINT_COLOR, -1);
+		if (detectedPosition) {
+			cv::circle(outputFrame, *detectedPosition, POINT_RADIUS, DETECTED_POINT_COLOR, -1);
+		}
+		if (correctedPosition) {
+			cv::circle(outputFrame, *correctedPosition, POINT_RADIUS, CORRECTED_POINT_COLOR, -1);
 		}
 
 		// Save points
 		precedentDetections.push_back(detectedPosition);
 		precedentPredictions.push_back(predictedPoint);
+		precedentCorrected.push_back(correctedPosition);
 
 		// Draw trajectories on the frame
 		for (auto p1 = precedentDetections.begin(), p2 = p1+1; p1 != precedentDetections.end()-1; ++p1, ++p2) {
@@ -179,9 +189,12 @@ int main(int argc, char** argv) {
 			if (!*p1 || !*p2) continue;
 			cv::line(outputFrame, **p1, **p2, DETECTED_POINT_COLOR, LINE_WIDTH);
 		}
-
 		for (auto p1 = precedentPredictions.begin(), p2 = p1+1; p1 != precedentPredictions.end()-1; ++p1, ++p2) {
 			cv::line(outputFrame, *p1, *p2, PREDICTED_POINT_COLOR, LINE_WIDTH);
+		}
+		for (auto p1 = precedentCorrected.begin(), p2 = p1+1; p1 != precedentCorrected.end()-1; ++p1, ++p2) {
+			if (!*p1 || !*p2) continue;
+			cv::line(outputFrame, **p1, **p2, CORRECTED_POINT_COLOR, LINE_WIDTH);
 		}
 
 		// Show image
@@ -195,13 +208,24 @@ int main(int argc, char** argv) {
 
 	// Write datas as a csv file
 	std::ofstream csv(outputStatPath);
-	csv << "measured X, " << "measured Y, " << "predicted X, " << "predicted Y" << std::endl;
-	for (auto [pMeasured, pPredicted] = std::tuple{precedentDetections.begin(), precedentPredictions.begin()};
-			pMeasured != precedentDetections.end() && pPredicted != precedentPredictions.end();
-			++pMeasured, ++pPredicted) {
+	csv << "measured X, " << "measured Y, "
+			<< "predicted X, " << "predicted Y, "
+			<< "corrected X, " << "corrected Y"
+			<< std::endl;
+	for (auto [pMeasured, pPredicted, pCorrected] = std::tuple{
+			precedentDetections.begin(),
+			precedentPredictions.begin(),
+			precedentCorrected.begin()};
+		pMeasured != precedentDetections.end()
+		&& pPredicted != precedentPredictions.end()
+		&& pCorrected != precedentCorrected.end();
+			++pMeasured, ++pPredicted, ++pCorrected) {
 		csv << (*pMeasured ? std::to_string((**pMeasured).x) : "") << ", "
 				<< (*pMeasured ? std::to_string((**pMeasured).y) : "") << ", "
-				<< (*pPredicted).x << ", " << (*pPredicted).y << std::endl;
+				<< (*pPredicted).x << ", "
+				<< (*pPredicted).y << ", "
+				<< (*pCorrected ? std::to_string((**pCorrected).x) : "") << ", "
+				<< (*pCorrected ? std::to_string((**pCorrected).y) : "") << std::endl;
 	}
 	return EXIT_SUCCESS;
 }
